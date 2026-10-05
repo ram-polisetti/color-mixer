@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pigment — paint mixing helper</title>
+<style>
+  :root { --ink: #1c1c1e; --muted: #6b6b70; --line: #e5e5ea; --bg: #fafaf8; --card: #ffffff; --accent: #2b3aa0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink); }
+  header { padding: 28px 20px 8px; max-width: 640px; margin: 0 auto; }
+  header h1 { margin: 0 0 4px; font-size: 30px; letter-spacing: -0.5px; }
+  header p { margin: 0; color: var(--muted); font-size: 15px; }
+  .tabs { display: flex; gap: 8px; max-width: 640px; margin: 16px auto 0; padding: 0 20px; }
+  .tabs button { flex: 1; padding: 12px; font-size: 15px; border: 1px solid var(--line); background: var(--card); border-radius: 12px; cursor: pointer; }
+  .tabs button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 20px 40px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+  label:first-child { margin-top: 0; }
+  .color-row { display: flex; gap: 10px; align-items: center; }
+  input[type="color"] { width: 56px; height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 4px; background: #fff; cursor: pointer; }
+  input[type="text"] { flex: 1; padding: 11px 12px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; font-family: ui-monospace, monospace; text-transform: uppercase; }
+  .go { width: 100%; margin-top: 16px; padding: 14px; font-size: 16px; font-weight: 600; background: var(--accent); color: #fff; border: 0; border-radius: 12px; cursor: pointer; }
+  .go:disabled { opacity: 0.5; }
+  .swatches { display: flex; gap: 12px; margin: 6px 0 4px; }
+  .sw { flex: 1; text-align: center; }
+  .sw .chip { height: 64px; border-radius: 12px; border: 1px solid var(--line); }
+  .sw .cap { font-size: 12px; color: var(--muted); margin-top: 6px; font-family: ui-monospace, monospace; }
+  .recipe { margin-top: 8px; }
+  .part { margin: 10px 0; }
+  .part .row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
+  .part .bar { height: 10px; background: #f0f0ee; border-radius: 6px; overflow: hidden; }
+  .part .fill { height: 100%; border-radius: 6px; }
+  .quality { margin-top: 12px; font-size: 14px; color: var(--muted); }
+  .quality strong { color: var(--ink); }
+  .step { background: #f6f6f4; border-radius: 10px; padding: 12px 14px; margin: 8px 0; font-size: 15px; }
+  .step b { font-weight: 700; }
+  .hidden { display: none; }
+  .palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px; }
+  .pig { text-align: center; font-size: 12px; color: var(--muted); }
+  .pig .chip { height: 52px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 4px; }
+  footer { max-width: 640px; margin: 0 auto; padding: 0 20px 40px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  h2 { font-size: 17px; margin: 4px 0 10px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pigment</h1>
+  <p>A paint-mixing helper. Recipes from a 12-pigment acrylic palette, plus fix-advice for colors you've already mixed.</p>
+</header>
+
+<div class="tabs">
+  <button id="tabBtnRecipe" class="active">Find a recipe</button>
+  <button id="tabBtnShift">Shift a color</button>
+</div>
+
+<main>
+  <!-- RECIPE TAB -->
+  <section id="tabRecipe">
+    <div class="card">
+      <label>Target color</label>
+      <div class="color-row">
+        <input type="color" id="recipeColor" value="#2e8b57">
+        <input type="text" id="recipeHex" value="#2E8B57" maxlength="7" spellcheck="false">
+      </div>
+      <button class="go" id="recipeGo">Mix it</button>
+      <div class="hint">Tip: sample a color from a photo with your phone's color picker, then paste the hex here.</div>
+    </div>
+    <div class="card hidden" id="recipeOut">
+      <h2>Recipe</h2>
+      <div class="swatches">
+        <div class="sw"><div class="chip" id="recipeTargetChip"></div><div class="cap">TARGET</div></div>
+        <div class="sw"><div class="chip" id="recipeMixChip"></div><div class="cap">PREDICTED</div></div>
+      </div>
+      <div class="recipe" id="recipeParts"></div>
+      <div class="quality" id="recipeQuality"></div>
+    </div>
+  </section>
+
+  <!-- SHIFT TAB -->
+  <section id="tabShift" class="hidden">
+    <div class="card">
+      <label>The color you have mixed</label>
+      <div class="color-row">
+        <input type="color" id="shiftFromColor" value="#e01b22">
+        <input type="text" id="shiftFromHex" value="#E01B22" maxlength="7" spellcheck="false">
+      </div>
+      <label>The color you want</label>
+      <div class="color-row">
+        <input type="color" id="shiftToColor" value="#7b2d8b">
+        <input type="text" id="shiftToHex" value="#7B2D8B" maxlength="7" spellcheck="false">
+      </div>
+      <button class="go" id="shiftGo">What do I add?</button>
+    </div>
+    <div class="card hidden" id="shiftOut">
+      <h2>Shift plan</h2>
+      <div class="swatches">
+        <div class="sw"><div class="chip" id="shiftFromChip"></div><div class="cap">YOU HAVE</div></div>
+        <div class="sw"><div class="chip" id="shiftWantChip"></div><div class="cap">YOU WANT</div></div>
+        <div class="sw"><div class="chip" id="shiftEndChip"></div><div class="cap">PREDICTED</div></div>
+      </div>
+      <div id="shiftSteps"></div>
+      <div class="quality" id="shiftQuality"></div>
+    </div>
+  </section>
+
+  <div class="card">
+    <h2>The palette</h2>
+    <div class="palette" id="paletteGrid"></div>
+  </div>
+</main>
+
+<footer>
+  How it works: each pigment is modeled as a reflectance spectrum; mixing takes the weighted geometric mean of spectra (the standard approximation for real paint), converted through CIE color math. It is a toy model, not paint chemistry — real pigments vary by brand, and ratios are starting points. Mix a test batch and judge by eye.
+</footer>
+
+<script src="color-core.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  // tabs
+  function showTab(which) {
+    $('tabRecipe').classList.toggle('hidden', which !== 'recipe');
+    $('tabShift').classList.toggle('hidden', which !== 'shift');
+    $('tabBtnRecipe').classList.toggle('active', which === 'recipe');
+    $('tabBtnShift').classList.toggle('active', which === 'shift');
+  }
+  $('tabBtnRecipe').onclick = function () { showTab('recipe'); };
+  $('tabBtnShift').onclick = function () { showTab('shift'); };
+
+  // keep color input + hex field in sync
+  function pair(colorId, hexId) {
+    var c = $(colorId), h = $(hexId);
+    c.addEventListener('input', function () { h.value = c.value.toUpperCase(); });
+    h.addEventListener('input', function () {
+      var v = h.value.trim();
+      if (/^#?[0-9a-fA-F]{6}$/.test(v)) c.value = v.charAt(0) === '#' ? v : '#' + v;
+    });
+  }
+  pair('recipeColor', 'recipeHex');
+  pair('shiftFromColor', 'shiftFromHex');
+  pair('shiftToColor', 'shiftToHex');
+
+  function validHex(v) {
+    v = v.trim();
+    if (v.charAt(0) !== '#') v = '#' + v;
+    return /^[0-9A-Fa-f]{6}$/.test(v.slice(1)) ? ('#' + v.slice(1).toUpperCase()) : null;
+  }
+
+  function partRow(p) {
+    var pct = Math.round(p.weight * 100);
+    var sw = PIGMENT_SWATCHES.filter(function (s) { return s.name === p.pigment; })[0];
+    var col = sw ? sw.hex : '#ccc';
+    return '<div class="part"><div class="row"><span>' + p.pigment + '</span><span><b>' + pct + '%</b></span></div>' +
+      '<div class="bar"><div class="fill" style="width:' + pct + '%;background:' + col + '"></div></div></div>';
+  }
+
+  // recipe
+  $('recipeGo').onclick = function () {
+    var hex = validHex($('recipeHex').value);
+    if (!hex) { alert('Enter a valid hex color, e.g. #2E8B57'); return; }
+    var btn = $('recipeGo');
+    btn.disabled = true; btn.textContent = 'Mixing…';
+    setTimeout(function () {
+      var r = findRecipe(hexToLab(hex), 60);
+      $('recipeTargetChip').style.background = hex;
+      $('recipeMixChip').style.background = r.hex;
+      $('recipeParts').innerHTML = r.parts.map(partRow).join('');
+      $('recipeQuality').innerHTML = 'Predicted mix <strong>' + r.hex + '</strong> — ' + matchQuality(r.de) + '.';
+      $('recipeOut').classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Mix it';
+    }, 30);
+  };
+
+  // shift
+  $('shiftGo').onclick = function () {
+    var from = validHex($('shiftFromHex').value), to = validHex($('shiftToHex').value);
+    if (!from || !to) { alert('Enter valid hex colors, e.g. #E01B22'); return; }
+    var btn = $('shiftGo');
+    btn.disabled = true; btn.textContent = 'Thinking…';
+    setTimeout(function () {
+      var s = findShift(from, to);
+      $('shiftFromChip').style.background = from;
+      $('shiftWantChip').style.background = to;
+      var html = '';
+      if (s.alreadyClose) {
+        $('shiftEndChip').style.background = from;
+        html = '<div class="step">You are already there — no pigment needed.</div>';
+        $('shiftQuality').innerHTML = 'Match: <strong>' + matchQuality(s.de) + '</strong>.';
+      } else {
+        $('shiftEndChip').style.background = s.finalHex;
+        html += '<div class="step">Your color is closest to:<br>' +
+          s.baseRecipe.map(function (p) { return p.pigment + ' ' + Math.round(p.weight * 100) + '%'; }).join(' + ') + '</div>';
+        if (!s.additions.length) {
+          html += '<div class="step">No single pigment addition moves it closer — try remixing from the recipe above.</div>';
+        } else {
+          s.additions.forEach(function (a, i) {
+            html += '<div class="step"><b>Step ' + (i + 1) + ':</b> add about <b>' + Math.round(a.amount * 100) + '% ' + a.pigment + '</b> <span style="color:#6b6b70">(relative to the amount of paint you have)</span></div>';
+          });
+        }
+        $('shiftQuality').innerHTML = 'Predicted result <strong>' + s.finalHex + '</strong> — ' + matchQuality(s.finalDe) + '.';
+      }
+      $('shiftSteps').innerHTML = html;
+      $('shiftOut').classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'What do I add?';
+    }, 30);
+  };
+
+  // palette grid
+  $('paletteGrid').innerHTML = PIGMENT_SWATCHES.map(function (s) {
+    return '<div class="pig"><div class="chip" style="background:' + s.hex + '"></div>' + s.name + '</div>';
+  }).join('');
+})();
+</script>
+</body>
+</html>
