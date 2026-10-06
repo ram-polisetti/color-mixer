@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const C = require('./color-core.js');
 
 function w(...pairs) {
@@ -35,3 +36,14 @@ s = C.findShift('#2B3AA0', '#2E8B57');
 console.log('blue -> sea green:', JSON.stringify(s.additions), 'final', s.finalHex, 'dE=' + s.finalDe.toFixed(1));
 s = C.findShift('#808080', '#808080');
 console.log('gray -> gray:', s.alreadyClose ? 'already close' : 'moved');
+
+// Portable, deterministic invariants complement the exploratory output above.
+assert.equal(C.PIGMENT_SWATCHES.length, C.PIGMENTS.length);
+for (const swatch of C.PIGMENT_SWATCHES) {
+  assert.match(swatch.hex, /^#[0-9A-F]{6}$/i);
+}
+assert.equal(C.mixHex(w(['Titanium White', 1])), C.mixHex(w(['Titanium White', 10])));
+assert.equal(C.mixHex(w(['Cadmium Yellow', 1], ['Phthalo Blue', 1])),
+  C.mixHex(w(['Phthalo Blue', 1], ['Cadmium Yellow', 1])));
+assert.ok(C.findShift('#808080', '#808080').alreadyClose);
+console.log('Core invariant assertions passed.');
