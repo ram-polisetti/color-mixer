@@ -1,4 +1,4 @@
-const C = require('/home/hatch/workspace/color-mixer/color-core.js');
+const C = require('./color-core.js');
 
 function w(...pairs) {
   const v = new Array(C.PIGMENTS.length).fill(0);
