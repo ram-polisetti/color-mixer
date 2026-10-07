@@ -1,4 +1,4 @@
-const assert = require('node:assert/strict');
+const assert = require('assert/strict');
 const C = require('./color-core.js');
 
 function w(...pairs) {
@@ -42,8 +42,18 @@ assert.equal(C.PIGMENT_SWATCHES.length, C.PIGMENTS.length);
 for (const swatch of C.PIGMENT_SWATCHES) {
   assert.match(swatch.hex, /^#[0-9A-F]{6}$/i);
 }
-assert.equal(C.mixHex(w(['Titanium White', 1])), C.mixHex(w(['Titanium White', 10])));
-assert.equal(C.mixHex(w(['Cadmium Yellow', 1], ['Phthalo Blue', 1])),
-  C.mixHex(w(['Phthalo Blue', 1], ['Cadmium Yellow', 1])));
+// Distinct normalized vectors must produce distinct mixed colors. These fixed
+// model outputs guard the current spectral implementation, not physical paint.
+const equalMix = w(['Cadmium Yellow', 1], ['Phthalo Blue', 1]);
+const yellowHeavy = w(['Cadmium Yellow', 3], ['Phthalo Blue', 1]);
+const blueHeavy = w(['Cadmium Yellow', 1], ['Phthalo Blue', 3]);
+assert.notDeepEqual(equalMix, yellowHeavy);
+assert.notDeepEqual(yellowHeavy, blueHeavy);
+assert.equal(C.mixHex(equalMix), '#6A8B71');
+assert.equal(C.mixHex(yellowHeavy), '#B3B254');
+assert.equal(C.mixHex(blueHeavy), '#067088');
+assert.notEqual(C.mixHex(equalMix), C.mixHex(yellowHeavy));
+assert.notEqual(C.mixHex(yellowHeavy), C.mixHex(blueHeavy));
+assert.equal(C.mixHex(equalMix), C.mixHex(w(['Cadmium Yellow', 7], ['Phthalo Blue', 7])));
 assert.ok(C.findShift('#808080', '#808080').alreadyClose);
 console.log('Core invariant assertions passed.');
